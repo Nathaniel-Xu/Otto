@@ -1,0 +1,8 @@
+{
+  "name": "otto",
+  "version": "1.0.0",
+  "description": "Otto — personal omp extension (saved contexts, skillify)",
+  "omp": {
+    "extensions": ["./src/main.ts"]
+  }
+}
