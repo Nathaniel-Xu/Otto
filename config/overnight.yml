@@ -1,0 +1,24 @@
+# Overnight autonomy retry policy.
+#
+# Overlay this file to let long unattended runs (including subagents) sleep
+# through provider quota exhaustion instead of failing fast.
+#
+#   export PI_CONFIG_FILES="$HOME/.omp/agent/extensions/otto/config/overnight.yml"
+#   omp --config ./config/overnight.yml
+#
+# Why these values:
+#
+# TurnRecovery already sleeps the provider's retry-after hint, or
+# calculateRateLimitBackoffMs() when there is no hint -- 30 min for
+# QUOTA_EXHAUSTED. That path is shared by subagents. The only thing that
+# breaks it is retry.maxDelayMs, a fail-fast ceiling: when the required wait
+# exceeds it and no credential or model switch is available, the turn fails
+# instead of sleeping. The stock 5 min ceiling kills every quota wait, and a
+# 30 min ceiling clears the common case by exactly zero margin.
+retry:
+  enabled: true
+  # 6h ceiling absorbs Anthropic's 5h reset windows.
+  maxDelayMs: 21600000
+  # 20 waits of up to 30 min covers a night.
+  maxRetries: 20
+  baseDelayMs: 1000
