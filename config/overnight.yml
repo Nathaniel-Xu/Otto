@@ -1,10 +1,9 @@
 # Overnight autonomy retry policy.
 #
 # Overlay this file to let long unattended runs (including subagents) sleep
-# through provider quota exhaustion instead of failing fast.
-#
-#   export PI_CONFIG_FILES="$HOME/.omp/agent/extensions/otto/config/overnight.yml"
-#   omp --config ./config/overnight.yml
+# through provider quota exhaustion instead of failing fast. See the README:
+# the path differs between a plugin install and a linked checkout, and
+# `omp config set retry.maxDelayMs 21600000` does the same job with no overlay.
 #
 # Why these values:
 #
