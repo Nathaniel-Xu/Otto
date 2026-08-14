@@ -61,84 +61,65 @@ other, not both.
 
 ## Azure AI Foundry models
 
-`scripts/foundry-sync.py` registers every deployment on an Azure AI Foundry resource as an
-omp model under a `foundry/` prefix. Like `config/overnight.yml` this is a shipped asset,
-not extension code: provider config lives in `models.yml`, and the plugin capability scan
-never reads it, so `src/` cannot register it.
+Turns every deployment on an Azure AI Foundry resource into a `foundry/<deployment>` model.
+Python 3 stdlib only, no dependencies.
 
 ### Setup
 
-```sh
-# omp plugin install github:Nathaniel-Xu/Otto
-python3 "$HOME/.omp/plugins/node_modules/otto/scripts/foundry-sync.py" \
-    --endpoint https://<resource>.services.ai.azure.com --set-key <foundry-api-key>
+1. Run the script, using whichever path matches how Otto was installed:
 
-# checkout referenced from config.yml `extensions:` or `omp plugin link`
-python3 "$HOME/.omp/agent/extensions/otto/scripts/foundry-sync.py" \
-    --endpoint https://<resource>.services.ai.azure.com --set-key <foundry-api-key>
-```
+   ```sh
+   # omp plugin install github:Nathaniel-Xu/Otto
+   python3 "$HOME/.omp/plugins/node_modules/otto/scripts/foundry-sync.py" \
+       --endpoint https://<resource>.services.ai.azure.com --set-key <foundry-api-key>
 
-That writes `~/.omp/agent/.env` (mode `600`) with `AZURE_FOUNDRY_ENDPOINT` and
-`AZURE_OPENAI_API_KEY`, lists the resource's deployments, and regenerates the `foundry`
-provider in `~/.omp/agent/models.yml`. Restart omp, then select models as
-`foundry/<deployment-name>` — `omp models find foundry` lists them.
+   # omp plugin link, or a checkout in config.yml `extensions:`
+   python3 "$HOME/.omp/agent/extensions/otto/scripts/foundry-sync.py" \
+       --endpoint https://<resource>.services.ai.azure.com --set-key <foundry-api-key>
+   ```
 
-Re-run bare (no flags) after adding or removing deployments; credentials are then read from
-the environment or `~/.omp/agent/.env`. Requires only the Python 3 standard library.
+2. Restart omp.
+3. Check it worked: `omp models find foundry`.
+4. Use a model: `omp --model foundry/gpt-5-mini`.
 
-### Rotating the key
+### Rotate the key
 
 ```sh
 python3 scripts/foundry-sync.py --set-key <new-key>
 ```
 
-`models.yml` stores `apiKey: AZURE_OPENAI_API_KEY`, which omp resolves as an *env-var name*
-rather than a literal, so no secret is written there and rotation needs no regeneration —
-`--set-key` only rewrites `.env` (preserving the endpoint) and re-lists deployments, which
-fails loudly on a bad key. Validate a key before storing it with
-`omp --model foundry/gpt-5-mini --api-key <new-key> --no-session -p 'Reply with only: OK'`;
-`--api-key` outranks `.env`.
+Test a key before storing it (`--api-key` beats the stored one):
 
-Two precedence traps: a shell-exported `AZURE_OPENAI_API_KEY` beats every `.env` file, and
-`<cwd>/.env` beats `~/.omp/agent/.env`. If a rotation seems not to take, check
-`printenv AZURE_OPENAI_API_KEY` first.
-
-### How it works
-
-All deployments are reached through the Foundry v1 Responses surface, a single URL and a
-single `api-key` header that serves OpenAI, Anthropic, xAI, Moonshot, DeepSeek and Mistral
-deployments alike:
-
-```
-POST {endpoint}/openai/v1/responses
+```sh
+omp --model foundry/gpt-5-mini --api-key <new-key> --no-session -p 'Reply with only: OK'
 ```
 
-That is exactly the URL omp's `azure-openai-responses` transport builds, so the generated
-provider is plain config with no custom transport. Notes on the choices:
+### After adding or removing deployments
 
-- The bundled `azure` provider is deliberately **not** reused: its catalog filters to
-  OpenAI-family ids and drops third-party Foundry models, hiding Claude/Grok/Kimi.
-- A custom provider id means model ids are the literal deployment names, so
-  `AZURE_OPENAI_DEPLOYMENT_NAME_MAP` is unnecessary — worth avoiding, as omp's own docs
-  disagree on its delimiter (`=` vs `:`).
-- `compat` restores the three Azure flags that URL auto-detection misses on a
-  `services.ai.azure.com` host: `strictResponsesPairing` (the backend rejects unpaired tool
-  results), `supportsDeveloperRole`, and `supportsStore: false`.
-- Never set `AZURE_OPENAI_API_VERSION`. The provider needs the default `v1`; a dated version
-  would rewrite the URL and break it. Only `/openai/v1/responses` serves all model families —
-  `/openai/v1/chat/completions` is OpenAI-family only, and the deployment-scoped
-  `/openai/deployments/.../chat/completions` route rejects Anthropic deployments outright.
-- `contextWindow` / `maxTokens` are family-based estimates in the script's `FAMILIES` table;
-  Azure's deployment list does not report them. They drive compaction timing, so correct any
-  that matter and re-run.
-- Known quirk: a deployment named `<base>-reasoning` collapses into `<base>`, which inherits
-  its thinking levels (omp reads the suffix as a thinking variant). Observed with
-  `Phi-4-reasoning`; `*-reasoning`/`*-non-reasoning` pairs such as Grok's survive intact.
+```sh
+python3 scripts/foundry-sync.py
+```
 
-`models.yml` is generated — do not hand-edit or copy it between machines; re-run the script
-instead. Only `scripts/foundry-sync.py` is worth version-controlling, and it holds no secret.
-PyYAML is optional: when installed, unrelated providers in an existing `models.yml` are
-preserved; without it the script refuses to overwrite a file it did not generate.
+### Porting to another machine
+
+Copy nothing but the script — re-run step 1. `models.yml` is generated; never hand-edit it or
+copy it between machines.
+
+### Gotchas
+
+- **Never set `AZURE_OPENAI_API_VERSION`.** It breaks the provider, which needs the default `v1`.
+- **Rotation not taking effect?** Check `printenv AZURE_OPENAI_API_KEY` — a shell export beats
+  every `.env` file, and `<cwd>/.env` beats `~/.omp/agent/.env`.
+- **Context windows are estimates.** Azure does not report them. They drive compaction timing;
+  fix any that matter in the script's `FAMILIES` table and re-run.
+- **A `<base>-reasoning` deployment merges into `<base>`** and hands it its thinking levels.
+  Hit `Phi-4-reasoning`; `*-reasoning`/`*-non-reasoning` pairs like Grok's are fine.
+- **`pip install pyyaml` if you keep other providers in `models.yml`.** Without it the script
+  won't touch a file it didn't write, to avoid clobbering them.
+
+No secret lands in `models.yml` — it stores the *name* `AZURE_OPENAI_API_KEY`, and the value
+lives in `~/.omp/agent/.env` (mode `600`). Commit `f0544a3` records why this uses a custom
+provider instead of omp's bundled `azure` one, and which Foundry routes work.
 
 ## Layout
 
