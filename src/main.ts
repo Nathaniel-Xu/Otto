@@ -191,6 +191,23 @@ async function handleNewWithPresets(ctx: ExtensionCommandContext, pi: ExtensionA
 }
 
 export default function otto(pi: ExtensionAPI) {
+	pi.registerCommand("chain", {
+		description: "Queue a prompt to run after the current turn finishes.",
+		handler: (args, ctx) => {
+			const prompt = args.trim();
+			if (!prompt) {
+				ctx.ui.notify("Usage: /chain <prompt>", "warning");
+				return;
+			}
+			if (ctx.isIdle()) {
+				ctx.ui.notify("No active turn to chain onto.", "warning");
+				return;
+			}
+			pi.sendUserMessage(prompt, { deliverAs: "followUp" });
+			ctx.ui.notify("Follow-up queued.", "info");
+		},
+	});
+
 	pi.registerCommand("save", {
 		description:
 			"Save current conversation context for /new presets (repo-local). Slash /new and /clear show a picker when presets exist; keybinding app.session.new stays blank.",
