@@ -4,7 +4,7 @@ A personal [oh-my-pi](https://github.com/oh-my-pi) extension.
 
 ## Features
 
-- `/chain <prompt>` — queue a prompt to run as a new user turn after the current turn finishes.
+- `/chain <prompt>` — queue a follow-up prompt in the current session, preserving its conversation context, after the active turn finishes.
 - `/save` — save the current conversation context as a repo-local preset.
 - `/new-context` — start a new session, optionally seeded from a saved preset. `/new` and `/clear` transparently show the preset picker when presets exist.
 - **skillify** skill — turns a described workflow into a new skill or prompt template for this extension.
