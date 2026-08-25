@@ -4,10 +4,11 @@ A personal [oh-my-pi](https://github.com/oh-my-pi) extension.
 
 ## Features
 
+- `/ask <question>` — answer plainly, leading with the practical implications.
 - `/chain <prompt>` — queue a follow-up prompt in the current session, preserving its conversation context, after the active turn finishes.
 - `/save` — save the current conversation context as a repo-local preset.
 - `/new-context` — start a new session, optionally seeded from a saved preset. `/new` and `/clear` transparently show the preset picker when presets exist.
-- **skillify** skill — turns a described workflow into a new skill or prompt template for this extension.
+- **skillify** skill — turns a described workflow into a new skill or slash command for this extension.
 - `config/overnight.yml` — retry-policy overlay for unattended overnight runs (see below).
 - `scripts/foundry-sync.py` — expose every Azure AI Foundry deployment to omp as a `foundry/*` model (see below).
 
@@ -28,8 +29,8 @@ omp plugin link /path/to/this/repo
 `config/overnight.yml` raises `retry.maxDelayMs` so long unattended runs sleep through
 provider quota exhaustion instead of failing fast. It is a config overlay, not extension
 code: `ExtensionAPI` has no settings surface, and the plugin capability scan only picks up
-`skills/`, `hooks/`, `tools/`, `commands/`, `rules/`, `prompts/`, and `.mcp.json` — never
-settings. So it cannot be applied from `src/` and must be pointed at explicitly.
+`skills/`, `hooks/`, `tools/`, `commands/`, `rules/`, and `.mcp.json` — never settings. So it
+cannot be applied from `src/` and must be pointed at explicitly.
 
 ### Simplest: no overlay at all
 
@@ -122,14 +123,45 @@ No secret lands in `models.yml` — it stores the *name* `AZURE_OPENAI_API_KEY`,
 lives in `~/.omp/agent/.env` (mode `600`). Commit `f0544a3` records why this uses a custom
 provider instead of omp's bundled `azure` one, and which Foundry routes work.
 
+## Slash commands
+
+Two mechanisms, and they are not interchangeable:
+
+- **`commands/<name>.md`** — a markdown body that replaces the typed `/name …` text. Frontmatter
+  is `name` (defaults to the filename) and `description` (autocomplete text). Arguments are `$1`,
+  `$2`, `$@[start:length]`, and `$ARGUMENTS`/`$@`; with no placeholder they are appended. This is
+  the default choice — `/ask` is one file, no code.
+- **`pi.registerCommand` in `src/`** — only when the command needs session or UI behaviour a text
+  template cannot express: `/chain` queues a follow-up turn, `/save` writes files and opens a
+  picker, `/new-context` starts a session.
+
+Discovery caveat for `commands/*.md`: omp scans `commands/` under installed plugin roots
+(`~/.omp/plugins/node_modules/otto`, refreshed only on plugin update) and under
+`~/.omp/agent/commands/`. A checkout referenced from `config.yml` `extensions:` loads only the
+extension module, so its `commands/` directory is never scanned. When developing against a
+checkout, symlink each command into the user command directory:
+
+```sh
+ln -sfn ~/.omp/agent/extensions/otto/commands/ask.md ~/.omp/agent/commands/ask.md
+```
+
+Commands and skills are loaded at session start; there is no file watcher. Verify an expansion
+without opening the TUI:
+
+```sh
+omp -p --mode json --no-session "/ask sample question" | grep -o '"text":"[^"]*"' | head -2
+```
+
+The first user message must show the expanded body, not the literal `/ask …` text.
+
 ## Layout
 
 ```
 otto/
-  package.json      # omp.extensions -> ./src/main.ts
+  package.json       # omp.extensions -> ./src/main.ts
   config/            # config.yml-style overlays (overnight retry policy)
   scripts/           # standalone setup scripts (Foundry model sync)
-  src/               # extension module (tools/commands/events)
+  src/               # extension module (registered commands, events)
   skills/            # skills bundled with the extension (skillify)
-  prompts/           # prompt templates (loaded when installed via extensions:/-e)
+  commands/          # markdown slash commands (/ask)
 ```
