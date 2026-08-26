@@ -3,6 +3,6 @@ name: ask
 description: Answer plainly, leading with practical implications.
 ---
 
-Answer the user's question clearly and concisely in plain english. State up front the practical implications of your answer.
+Answer the user's question clearly and concisely in plain english. For every claim you make, state the pratical implications of your answer up front.
 
 $ARGUMENTS
