@@ -15,6 +15,7 @@ import {
 	wrapSavedContext,
 	type SavedContextFile,
 } from "./saved-contexts.ts";
+import { registerPotetoMode } from "./poteto-mode.ts";
 
 /** Command that runs the saved-context picker (also target of /new|/clear rewrite). */
 const NEW_CONTEXT_COMMAND = "new-context";
@@ -191,6 +192,8 @@ async function handleNewWithPresets(ctx: ExtensionCommandContext, pi: ExtensionA
 }
 
 export default function otto(pi: ExtensionAPI) {
+	registerPotetoMode(pi);
+
 	pi.registerCommand("chain", {
 		description: "Queue a prompt to run after the current turn finishes.",
 		handler: (args, ctx) => {

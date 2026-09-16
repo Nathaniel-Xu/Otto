@@ -5,10 +5,12 @@ A personal [oh-my-pi](https://github.com/oh-my-pi) extension.
 ## Features
 
 - `/ask <question>` — answer plainly, leading with the practical implications.
+- `/poteto-mode [task]` — enable poteto mode for this session: inject the bundled Poteto skills into the system prompt and follow `skill://poteto-mode`. `/poteto-mode off` disables.
 - `/chain <prompt>` — queue a follow-up prompt in the current session, preserving its conversation context, after the active turn finishes.
 - `/save` — save the current conversation context as a repo-local preset.
 - `/new-context` — start a new session, optionally seeded from a saved preset. `/new` and `/clear` transparently show the preset picker when presets exist.
 - **skillify** skill — turns a described workflow into a new skill or slash command for this extension.
+- Poteto's skills and task agents are bundled under `skills/` and `agents/`; no separate pstack plugin is required.
 - `config/overnight.yml` — retry-policy overlay for unattended overnight runs (see below).
 - `scripts/foundry-sync.py` — expose every Azure AI Foundry deployment to omp as a `foundry/*` model (see below).
 
@@ -133,7 +135,8 @@ Two mechanisms, and they are not interchangeable:
   the default choice — `/ask` is one file, no code.
 - **`pi.registerCommand` in `src/`** — only when the command needs session or UI behaviour a text
   template cannot express: `/chain` queues a follow-up turn, `/save` writes files and opens a
-  picker, `/new-context` starts a session.
+  picker, `/new-context` starts a session, `/poteto-mode` exposes the bundled Poteto skills for
+  the rest of the session.
 
 Discovery caveat for `commands/*.md`: omp scans `commands/` under installed plugin roots
 (`~/.omp/plugins/node_modules/otto`, refreshed only on plugin update) and under
