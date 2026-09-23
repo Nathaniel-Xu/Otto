@@ -114,8 +114,12 @@ copy it between machines.
 - **Never set `AZURE_OPENAI_API_VERSION`.** It breaks the provider, which needs the default `v1`.
 - **Rotation not taking effect?** Check `printenv AZURE_OPENAI_API_KEY` — a shell export beats
   every `.env` file, and `<cwd>/.env` beats `~/.omp/agent/.env`.
-- **Context windows are estimates.** Azure does not report them. They drive compaction timing;
-  fix any that matter in the script's `FAMILIES` table and re-run.
+- **Context and output limits are static metadata.** The Foundry deployment-list API does not
+  return token limits. The sync script selects an exact `OVERRIDES` entry first, then the first
+  matching `FAMILIES` prefix, then `DEFAULT_META` (1,000,000 context / 128,000 output by default).
+  Exact and family matches can set different values. These values drive OMP request sizing; they do
+  not change the provider's actual server-side limits. Use an exact override for one deployment,
+  or a family entry for all matching deployments, then re-run the script.
 - **A `<base>-reasoning` deployment merges into `<base>`** and hands it its thinking levels.
   Hit `Phi-4-reasoning`; `*-reasoning`/`*-non-reasoning` pairs like Grok's are fine.
 - **`pip install pyyaml` if you keep other providers in `models.yml`.** Without it the script
