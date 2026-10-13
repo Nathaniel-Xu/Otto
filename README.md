@@ -12,6 +12,7 @@ A personal [oh-my-pi](https://github.com/oh-my-pi) extension.
 - **skillify** skill — turns a described workflow into a new skill or slash command for this extension.
 - Poteto's skills and task agents are bundled under `skills/` and `agents/`; no separate pstack plugin is required.
 - `config/overnight.yml` — retry-policy overlay for unattended overnight runs (see below).
+- `/foundry-sync` — re-sync Azure AI Foundry deployments into omp's `foundry/*` models and reload them in the running session; reports added/removed deployments.
 - `scripts/foundry-sync.py` — expose every Azure AI Foundry deployment to omp as a `foundry/*` model (see below).
 
 ## Install
@@ -100,6 +101,9 @@ omp --model foundry/gpt-5-mini --api-key <new-key> --no-session -p 'Reply with o
 
 ### After adding or removing deployments
 
+Run `/foundry-sync` inside omp. It runs the script, then reloads `models.yml` into the current
+session, so new deployments are selectable via `/model` without restarting. Outside omp:
+
 ```sh
 python3 scripts/foundry-sync.py
 ```
@@ -140,7 +144,7 @@ Two mechanisms, and they are not interchangeable:
 - **`pi.registerCommand` in `src/`** — only when the command needs session or UI behaviour a text
   template cannot express: `/chain` queues a follow-up turn, `/save` writes files and opens a
   picker, `/new-context` starts a session, `/poteto-mode` exposes the bundled Poteto skills for
-  the rest of the session.
+  the rest of the session, `/foundry-sync` runs a script and reloads the model registry.
 
 Discovery caveat for `commands/*.md`: omp scans `commands/` under installed plugin roots
 (`~/.omp/plugins/node_modules/otto`, refreshed only on plugin update) and under
